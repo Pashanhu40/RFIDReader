@@ -3,8 +3,8 @@
 #include "sys.h"
 
 //ºËÐÄ°åÖ¸Ê¾µÆ
-#define LED_INS_ON   PCout(13) = 1
-#define LED_INS_OFF  PCout(13) = 0
+#define LED_INS_ON   PCout(13) = 0
+#define LED_INS_OFF  PCout(13) = 1
 //LED red
 #define LED_RED_ON   PBout(7) = 1
 #define LED_RED_OFF  PBout(7) = 0

@@ -23,7 +23,6 @@
 /* cJSON */
 /* JSON parser in C. */
 
-#include "malloc.h"
 /* disable warnings about old C89 functions in MSVC */
 #if !defined(_CRT_SECURE_NO_DEPRECATE) && defined(_MSC_VER)
 #define _CRT_SECURE_NO_DEPRECATE
@@ -32,7 +31,6 @@
 #ifdef __GNUC__
 #pragma GCC visibility push(default)
 #endif
-
 #if defined(_MSC_VER)
 #pragma warning (push)
 /* disable warning about single line comments in system headers */

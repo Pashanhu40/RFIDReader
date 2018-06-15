@@ -1,4 +1,8 @@
+#ifndef __RC522_H
+#define __RC522_H	 
+
 #include "stm32f10x.h"
+#include "sys.h"
 
 /////////////////////////////////////////////////////////////////////
 //MF522命令字
@@ -104,7 +108,7 @@
 #define     RFU3C                 0x3C   
 #define     RFU3D                 0x3D   
 #define     RFU3E                 0x3E   
-#define     RFU3F		  		  0x3F
+#define     RFU3F		  		        0x3F
 
 /////////////////////////////////////////////////////////////////////
 //和MF522通讯时返回的错误代码
@@ -121,24 +125,28 @@
 #define READCARD	0xa3
 #define ADDMONEY	0xa4
 
-//
-//#define  spi_cs 1;
-//sbit  spi_ck=P0^6;
-//sbit  spi_mosi=P0^7;
-//sbit  spi_miso=P4^1;
-//sbit  spi_rst=P2^7;
+//连线说明
+//PB12---SPI2_NSS/SDA
+//PB13---SPI2_SCK
+//PB15---SPI2_MOSI
+//PB14---SPI2_MISO
+//悬空---IRQ
+//GND
+//PA8---RST
+//VCC---3.3
+
 #define SPIReadByte()	SPIWriteByte(0)
 u8 SPIWriteByte(u8 byte);
 void SPI2_Init(void);
 
-#define SET_SPI_CS  (GPIOF->BSRR=0X01)
-#define CLR_SPI_CS  (GPIOF->BRR=0X01)
+/*好大一个坑*/
+#define SET_SPI_CS     (GPIOB->BSRR = 0x1000) 
+#define CLR_SPI_CS     (GPIOB->BRR  = 0x1000)
 
-#define SET_RC522RST  GPIOF->BSRR=0X02
-#define CLR_RC522RST  GPIOF->BRR=0X02
+#define SET_RC522_RST  (GPIOA->BSRR = 0x0100)
+#define CLR_RC522_RST  (GPIOA->BRR  = 0x0100)
 
-
-void InitRc522(void);
+void RC522_Init(void);
 void ClearBitMask(u8   reg,u8   mask);
 void WriteRawRC(u8   Address, u8   value);
 void SetBitMask(u8   reg,u8   mask);
@@ -162,4 +170,11 @@ char PcdAuthState(unsigned char auth_mode,unsigned char addr,unsigned char *pKey
 char PcdWrite(unsigned char addr,unsigned char *pData);
 char PcdRead(unsigned char addr,unsigned char *pData);
 char PcdHalt(void);
-void Reset_RC522(void);
+void RC522_Reset(void);
+
+
+
+
+#endif
+
+

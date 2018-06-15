@@ -1,3 +1,13 @@
+//连线说明
+//PB12---SPI2_NSS/SDA
+//PB13---SPI2_SCK
+//PB15---SPI2_MOSI
+//PB14---SPI2_MISO
+//悬空---IRQ
+//GND
+//PA8---RST
+//VCC---3.3
+
 #include "sys.h"
 #include "string.h"
 #include "rc522.h"
@@ -54,37 +64,50 @@ u8 SPI2_ReadWriteByte(u8 TxData)
   
 void SPI2_SetSpeed(u8 SPI_BaudRatePrescaler)
 {
-  	assert_param(IS_SPI_BAUDRATE_PRESCALER(SPI_BaudRatePrescaler));
+  assert_param(IS_SPI_BAUDRATE_PRESCALER(SPI_BaudRatePrescaler));
 	SPI2->CR1&=0XFFC7;
 	SPI2->CR1|=SPI_BaudRatePrescaler;	//设置SPI2速度 
 	SPI_Cmd(SPI2,ENABLE); 
 
 } 
 
-
-
+//PB12---SPI2_NSS
+//PB13---SPI2_SCK
+//PB14---SPI2_MISO
+//PB15---SPI2_MOSI
+//PA8---RST
 
 void SPI2_Init(void)	
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
-  	SPI_InitTypeDef  SPI_InitStructure;
- 	RCC_APB2PeriphClockCmd(	RCC_APB2Periph_GPIOB|RCC_APB2Periph_GPIOF, ENABLE );//PORTB时钟使能 
-	RCC_APB1PeriphClockCmd(	RCC_APB1Periph_SPI2,  ENABLE );//SPI2时钟使能
+	SPI_InitTypeDef  SPI_InitStructure;
+	
+ 	RCC_APB2PeriphClockCmd(	RCC_APB2Periph_GPIOB|RCC_APB2Periph_GPIOA, ENABLE );
+	RCC_APB1PeriphClockCmd(	RCC_APB1Periph_SPI2,  ENABLE );
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0|GPIO_Pin_1;	 //IO-->PF0、PF1 端口配置
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 //推挽输出
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		 //IO口速度为50MHz
-    GPIO_Init(GPIOF, &GPIO_InitStructure);					 //根据设定参数初始化PF0、PF1
-    GPIO_ResetBits(GPIOF,GPIO_Pin_1);			             //PF1输出低
-    //GPIO_SetBits(GPIOF,GPIO_Pin_0);
-
+	//PA8 复位引脚
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;	 
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		 
+	GPIO_Init(GPIOA, &GPIO_InitStructure);	
+  //初始化输出低电平	
+	GPIO_ResetBits(GPIOA,GPIO_Pin_8);			             
+   
+	//PB12 片选引脚
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;	         
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP; 		 
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;		 
+	GPIO_Init(GPIOB, &GPIO_InitStructure);					     
+	//GPIO_SetBits(GPIOB,GPIO_Pin_12);			             
+	
+	//PB13、14、15 SPI2
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;  //PB13/14/15复用推挽输出 
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;  
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOB, &GPIO_InitStructure);//初始化GPIOB
-
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+  //初始化输出高电平
  	GPIO_SetBits(GPIOB,GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);  //PB13/14/15上拉
-
+  
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;  //设置SPI单向或者双向的数据模式:SPI设置为双线双向全双工
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;		//设置SPI工作模式:设置为主SPI
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;		//设置SPI的数据大小:SPI发送接收8位帧结构
@@ -95,35 +118,42 @@ void SPI2_Init(void)
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;	//指定数据传输从MSB位还是LSB位开始:数据传输从MSB位开始
 	SPI_InitStructure.SPI_CRCPolynomial = 7;	//CRC值计算的多项式
 	SPI_Init(SPI2, &SPI_InitStructure);  //根据SPI_InitStruct中指定的参数初始化外设SPIx寄存器
- 
+  
 	SPI_Cmd(SPI2, ENABLE); //使能SPI外设
 	
-	//SPI2_ReadWriteByte(0xff);//启动传输	
+	SPI2_ReadWriteByte(0xff);//启动传输	
 }
 
-void InitRc522(void)
+
+void RC522_Init(void)
 {
   SPI2_Init();
   PcdReset();
+	//关闭天线
   PcdAntennaOff();
-  delay_ms(2);  
+  delay_ms(2); 
+  //开启天线	
   PcdAntennaOn();
+	
+	//设置RC522的工作方式
   M500PcdConfigISOType( 'A' );
 }
 
 
-void Reset_RC522(void)
+void RC522_Reset(void)
 {
   PcdReset();
+	//关闭天线
   PcdAntennaOff();
   delay_ms(2);  
-  PcdAntennaOn();
+	//开启天线
+  PcdAntennaOn();  
 } 
 
 /////////////////////////////////////////////////////////////////////
-//功    能：寻卡
-//参数说明: req_code[IN]:寻卡方式
-//                0x52 = 寻感应区内所有符合14443A标准的卡
+//功    能：]:寻卡方式
+//                0x52寻卡
+//参数说明: req_code[IN = 寻感应区内所有符合14443A标准的卡
 //                0x26 = 寻未进入休眠状态的卡
 //          pTagType[OUT]：卡片类型代码
 //                0x4400 = Mifare_UltraLight
@@ -136,13 +166,13 @@ void Reset_RC522(void)
 char PcdRequest(u8   req_code,u8 *pTagType)
 {
 	char   status;  
-	u8   unLen;
-	u8   ucComMF522Buf[MAXRLEN]; 
-
+	u8     unLen;
+	u8     ucComMF522Buf[MAXRLEN]; 
+  
 	ClearBitMask(Status2Reg,0x08);
 	WriteRawRC(BitFramingReg,0x07);
 	SetBitMask(TxControlReg,0x03);
- 
+  
 	ucComMF522Buf[0] = req_code;
 
 	status = PcdComMF522(PCD_TRANSCEIVE,ucComMF522Buf,1,ucComMF522Buf,&unLen);
@@ -379,13 +409,13 @@ void CalulateCRC(u8 *pIn ,u8   len,u8 *pOut )
 char PcdReset(void)
 {
 	//PORTD|=(1<<RC522RST);
-	SET_RC522RST;
+	SET_RC522_RST;
     delay_ns(10);
 	//PORTD&=~(1<<RC522RST);
-	CLR_RC522RST;
+	CLR_RC522_RST;
     delay_ns(10);
 	//PORTD|=(1<<RC522RST);
-	SET_RC522RST;
+	SET_RC522_RST;
     delay_ns(10);
     WriteRawRC(CommandReg,PCD_RESETPHASE);
 	WriteRawRC(CommandReg,PCD_RESETPHASE);
@@ -402,7 +432,7 @@ char PcdReset(void)
     return MI_OK;
 }
 //////////////////////////////////////////////////////////////////////
-//设置RC632的工作方式 
+//设置RC522的工作方式 
 //////////////////////////////////////////////////////////////////////
 char M500PcdConfigISOType(u8   type)
 {
