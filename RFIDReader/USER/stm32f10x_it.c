@@ -23,7 +23,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h" 
-
+#include "stdio.h"
 
  
 void NMI_Handler(void)
@@ -85,3 +85,28 @@ void SysTick_Handler(void)
 /*  available peripheral interrupt handler's name please refer to the startup */
 /*  file (startup_stm32f10x_xx.s).                                            */
 /******************************************************************************/
+extern char RX_cJSON[];
+extern unsigned char RX_STATE;
+extern unsigned char RX_BYTE_LEN;
+
+void USART1_IRQHandler(void)
+{
+	//这里定temp_buff，为了读出SR，DR 中的值使寄存器清零
+	unsigned char temp_buff;
+	
+  if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+  {
+    /* Read one byte from the receive data register */
+    RX_cJSON[RX_BYTE_LEN++] = USART_ReceiveData(USART1);
+		
+  }
+	else if(USART_GetITStatus(USART1, USART_IT_IDLE) != RESET)
+	{
+		temp_buff = USART1->SR;
+		temp_buff = USART1->DR;
+		
+		RX_STATE = 1;
+	}
+}
+
+
